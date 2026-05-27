@@ -1,0 +1,8 @@
+target/
+.git/
+.gitignore
+.env
+docs/
+*.md
+LICENSE
+api.http

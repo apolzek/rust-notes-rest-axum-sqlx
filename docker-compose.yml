@@ -1,0 +1,39 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: notes-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rust_axum_sqlx}
+      MYSQL_USER: ${MYSQL_USER:-notes}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-notes_pw}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pw}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_pw}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notes-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-notes}:${MYSQL_PASSWORD:-notes_pw}@mysql:3306/${MYSQL_DATABASE:-rust_axum_sqlx}
+      RUST_LOG: ${RUST_LOG:-info,tower_http=info,sqlx=warn}
+      BIND_ADDR: 0.0.0.0:8080
+      DB_MAX_CONNECTIONS: "10"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
